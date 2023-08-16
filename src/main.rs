@@ -27,22 +27,18 @@ pub struct Cpa{
 
 
 impl Cpa {
-    /* This class implements CPA as shown in:
-    https://eprint.iacr.org/2013/794.pdf */
-
-    fn update(&mut self, leakages: Array2<FormatTraces>, plaintext: Array2<FormatMetadata>
+    fn update(&mut self, trace: Vec<FormatTraces>, plaintext: Vec<FormatMetadata>
         , target_key: i32, guess_range: i32){
         
         /* This function updates the main arrays of the CPA, as shown in Alg. 4
         in the paper.*/
 
-        self.len_leakages = leakages.shape()[0];
-        self.len_samples = leakages.shape()[1];
-        self._al = Array2::zeros((guess_range as usize, self.len_samples));
-        self._target_byte = target_key;
-        self._guess_range = guess_range;
-        
         if ! self.start{
+            self.len_leakages = 0;
+            self.len_samples = trace.len();
+            self._al = Array2::zeros((guess_range as usize, self.len_samples));
+            self._target_byte = target_key;
+            self._guess_range = guess_range;
             self.sumleakages =  vec! [0; self.len_samples];
             self.sigleakages =  vec! [0; self.len_samples];
             self.sumkeys =  vec! [0; guess_range as usize];
@@ -52,16 +48,9 @@ impl Cpa {
             self.corr =  Array2::zeros((guess_range as usize, self.len_samples));
         }
 
-        let num_iterations: u32 = self.len_leakages as u32; 
-        let mut bar: ProgressBar = ProgressBar::default(num_iterations, 50, false);
-        for i in 0..self.len_leakages{
-            let trace: Vec<FormatTraces> = leakages.row(i).to_vec();
-            // println!("{:?}", trace);
-            let mut _plaintext = plaintext.row(i).to_vec();
-            self.gen_values(_plaintext.clone(), guess_range, target_key);
-            self.go(trace, _plaintext.clone(), guess_range);            
-            bar.update();
-        }
+        self.len_leakages += 1;
+        self.gen_values(plaintext.clone(), guess_range, target_key);
+        self.go(trace, plaintext.clone(), guess_range);   
     }
 
     fn gen_values(&mut self, metadata: Vec<FormatMetadata>,
@@ -100,14 +89,12 @@ impl Cpa {
                 p[[x as usize, i as usize]] = leakage_model(x, i) as usize;
             }
         } 
-        let iterations: u32 = self._guess_range as u32; 
-        let mut bar2: ProgressBar = ProgressBar::default(iterations, 50, false);
    
         for i in 0..self._guess_range{
             let _sigkeys = self.sigkeys[i as usize] as f32 / self.len_leakages as f32;
             let _sumkeys = self.sumkeys[i as usize] as f32 / self.len_leakages as f32;
             let lower1: f32 = _sigkeys - (_sumkeys * _sumkeys); 
-            bar2.update();
+            
             for x in 0..self.len_samples{
                 let _sumleakages = self.sumleakages[x as usize] as f32 / self.len_leakages as f32;
                 let _sigleakages = self.sigleakages[x as usize] as f32 / self.len_leakages as f32;
@@ -127,7 +114,6 @@ impl Cpa {
 
 
     fn find_guess(&self){
-
         let mut max_256: Vec<f32> = vec![0.0; 256];
         for i in 0..self._guess_range{
             let row = self.corr.row(i as usize);
@@ -160,10 +146,13 @@ fn main()-> Result<(), Box<dyn error::Error>>{
     let dir_metadat: &str = "data/plaintext.npy";
     let leakages: ndarray::ArrayBase<ndarray::OwnedRepr<FormatTraces>, ndarray::Dim<[usize; 2]>> = read_leakages(dir_leakages)?;
     let plaintext: ndarray::ArrayBase<ndarray::OwnedRepr<FormatMetadata>, ndarray::Dim<[usize; 2]>> = read_metadata(dir_metadat)?;
-    c.update(leakages, plaintext, 1, 256);
+    let len_leakages = leakages.shape()[0];
+    let num_iter = len_leakages as u32;
+    let mut bar = ProgressBar::default(num_iter, 50, false);
+    for i in 0..len_leakages{
+        c.update(leakages.row(i).to_vec(), plaintext.row(i).to_vec(), 1, 256);
+        bar.update();
+    }
     c.finalize();
     Ok(())
 }
-
-
-
