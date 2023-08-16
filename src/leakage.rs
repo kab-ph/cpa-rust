@@ -18,8 +18,6 @@ const SBOX:[u8; 256] = [
     ];
 
 
-
-
 pub fn leakage_model(value: i32, guess: i32) -> i32{
     hw(SBOX[(value ^ guess) as usize] as i32)
 }

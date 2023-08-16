@@ -1,13 +1,7 @@
 use ndarray_npy::ReadNpyExt;
 use std::fs::File;
-// use std::num::ParseIntError;
 use std:: error;
 use ndarray::Array2;
-// use std::time::Instant;
-// use std::{thread::sleep, time::Duration};
-// use simple_bar::ProgressBar;
-// use ndarray::OwnedRepr;
-
 use ndarray_npy::WriteNpyExt;
 use std::io::BufWriter;
 

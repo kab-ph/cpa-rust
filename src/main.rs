@@ -1,16 +1,5 @@
-// use std::num::ParseIntError;
 use std:: error;
 use ndarray::{Array2, s, ArrayView1};
-// use ndarray::prelude::*;
-
-// use std::io::BufWriter;
-
-
-// use std::time::Instant;
-// use std::{thread::sleep, time::Duration};
-// use simple_bar::ProgressBar;
-// use ndarray::OwnedRepr;
-
 /* import other files */
 mod leakage;
 use leakage:: leakage_model;
@@ -27,35 +16,28 @@ pub struct Cpa{
     sumkeys: Vec<usize>,
     sigkeys: Vec<usize>,
     values: Vec<FormatMetadata>,
-    // lenTraces: i32,   
-    _chunk: usize, 
     _al: Array2<usize>,
-    // chunkTrcaes: Array2<formatTraces>,
-    // chunkmetadata: Vec<FormatTraces>,
-    // values: Array2<u8>,
     start: bool,
     _target_byte: i32,
-    _leakages: Array2<FormatTraces>,
-    // chunktraces: Vec<formatTraces>,
     len_leakages: usize,
     _guess_range: i32,
     corr: Array2<f32>,
     len_samples: usize
 }
 
-/* This class performs cpa TBD .. */
-
 
 impl Cpa {
+    /* This class implements CPA as shown in:
+    https://eprint.iacr.org/2013/794.pdf */
 
     fn update(&mut self, leakages: Array2<FormatTraces>, plaintext: Array2<FormatMetadata>
         , target_key: i32, guess_range: i32){
-        /* This function updates the main arrays of the CPA
-        It takes a 2d arrays leakages and plaintext  */
-        self.len_leakages = leakages.shape()[0];
-        // println!("{}", self.len_leakages);
-        self.len_samples = leakages.shape()[1];
         
+        /* This function updates the main arrays of the CPA, as shown in Alg. 4
+        in the paper.*/
+
+        self.len_leakages = leakages.shape()[0];
+        self.len_samples = leakages.shape()[1];
         self._al = Array2::zeros((guess_range as usize, self.len_samples));
         self._target_byte = target_key;
         self._guess_range = guess_range;
@@ -72,7 +54,6 @@ impl Cpa {
 
         let num_iterations: u32 = self.len_leakages as u32; 
         let mut bar: ProgressBar = ProgressBar::default(num_iterations, 50, false);
-
         for i in 0..self.len_leakages{
             let trace: Vec<FormatTraces> = leakages.row(i).to_vec();
             // println!("{:?}", trace);
@@ -89,8 +70,6 @@ impl Cpa {
         for guess in 0.._guess_range{
             self.values[guess as usize] = leakage_model(metadata[_target_key as usize], guess);
         }  
-
-        // println!("{:?}", self.values);            
     }
 
 
@@ -110,22 +89,25 @@ impl Cpa {
         } 
     }
 
-    fn finalise(&mut self){
-        // println!("{:?}", self.sumkeys);
+    fn finalize(&mut self){
+        /* This function finalizes the calculation after feeding the
+        overall traces */
+        
         let shape_p = self._guess_range as usize;
         let mut p: ndarray::ArrayBase<ndarray::OwnedRepr<usize>, ndarray::Dim<[usize; 2]>> = Array2::zeros((shape_p , shape_p));
-        
         for i in 0..self._guess_range{
             for x in 0..self._guess_range{
                 p[[x as usize, i as usize]] = leakage_model(x, i) as usize;
             }
         } 
-        // for i in 0..self._guess_range
+        let iterations: u32 = self._guess_range as u32; 
+        let mut bar2: ProgressBar = ProgressBar::default(iterations, 50, false);
    
         for i in 0..self._guess_range{
             let _sigkeys = self.sigkeys[i as usize] as f32 / self.len_leakages as f32;
             let _sumkeys = self.sumkeys[i as usize] as f32 / self.len_leakages as f32;
             let lower1: f32 = _sigkeys - (_sumkeys * _sumkeys); 
+            bar2.update();
             for x in 0..self.len_samples{
                 let _sumleakages = self.sumleakages[x as usize] as f32 / self.len_leakages as f32;
                 let _sigleakages = self.sigleakages[x as usize] as f32 / self.len_leakages as f32;
@@ -136,18 +118,21 @@ impl Cpa {
                 let upper: f32 = upper1 - ((_sumkeys * _sumleakages));
                 let lower2: f32 = _sigleakages - (_sumleakages * _sumleakages);
                 let lower = f32::sqrt(lower1 * lower2);
-                self.corr[[i as usize, x]] = f32::abs(upper / lower);
-                // println!("{:?}", self.corr[[i as usize, x]]);
+                self.corr[[i as usize, x]] = f32::abs(upper / lower);                
             }
         }
+        self.find_guess();
+
+    }
+
+
+    fn find_guess(&self){
 
         let mut max_256: Vec<f32> = vec![0.0; 256];
         for i in 0..self._guess_range{
             let row = self.corr.row(i as usize);
             max_256[i as usize] = *row.iter().max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
-
         }
-
         let mut init_value: f32 = 0.0;
         let mut guess: i32 = 0;
         for i in 0..self._guess_range{
@@ -156,12 +141,10 @@ impl Cpa {
                 guess = i;
             }
         }
-
         println!("guessed key = {}", guess);
         let _ = write_npy("corr.npy", self.corr.clone());
-        println!("Result is saved in .npy!")
+        println!("Result is saved in .npy!");
     }
-
 
     fn sum_mult(&self, a: ArrayView1<usize>, b: ArrayView1<usize>) -> i32 {
         a.dot(&b) as i32
@@ -173,12 +156,12 @@ impl Cpa {
 
 fn main()-> Result<(), Box<dyn error::Error>>{
     let mut c: Cpa = Default::default();
-    let dir_leakages: &str  = "data/leakages.npy";
+    let dir_leakages: &str  = "data/leakages.npy"; 
     let dir_metadat: &str = "data/plaintext.npy";
     let leakages: ndarray::ArrayBase<ndarray::OwnedRepr<FormatTraces>, ndarray::Dim<[usize; 2]>> = read_leakages(dir_leakages)?;
     let plaintext: ndarray::ArrayBase<ndarray::OwnedRepr<FormatMetadata>, ndarray::Dim<[usize; 2]>> = read_metadata(dir_metadat)?;
     c.update(leakages, plaintext, 1, 256);
-    c.finalise();
+    c.finalize();
     Ok(())
 }
 
