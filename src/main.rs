@@ -1,12 +1,13 @@
 use std:: error;
 use ndarray::{Array2, s, ArrayView1};
+use simple_bar::ProgressBar;
+use rayon::prelude::{ParallelIterator, IntoParallelIterator};
 /* import other files */
 mod leakage;
 use leakage:: leakage_model;
 mod read;
 use read:: *;
-use simple_bar::ProgressBar;
-
+// use std::time::Instant;
 
 
 pub struct Cpa{
@@ -85,13 +86,16 @@ impl Cpa {
                 p[[x as usize, i as usize]] = leakage_model(x, i) as usize;
             }
         } 
-   
+
+
+        /* Parallel operation using multithreading */
         for i in 0..self._guess_range{
             let _sigkeys = self.sigkeys[i as usize] as f32 / self.len_leakages as f32;
             let _sumkeys = self.sumkeys[i as usize] as f32 / self.len_leakages as f32;
             let lower1: f32 = _sigkeys - (_sumkeys * _sumkeys); 
-            
-            for x in 0..self.len_samples{
+            let tmp: Vec<f32> = (0..self.len_samples).into_par_iter().
+            map(|x|
+            {
                 let _sumleakages = self.sumleakages[x as usize] as f32 / self.len_leakages as f32;
                 let _sigleakages = self.sigleakages[x as usize] as f32 / self.len_leakages as f32;
                 let slice_a = self._al.slice(s![.., x]);
@@ -101,12 +105,18 @@ impl Cpa {
                 let upper: f32 = upper1 - ((_sumkeys * _sumleakages));
                 let lower2: f32 = _sigleakages - (_sumleakages * _sumleakages);
                 let lower = f32::sqrt(lower1 * lower2);
-                self.corr[[i as usize, x]] = f32::abs(upper / lower);                
+                f32::abs(upper / lower)               
+            }).collect();
+
+            for z in 0..self.len_samples{
+                self.corr[[i as usize, z]] = tmp[z];
+
             }
         }
         self.find_guess();
 
     }
+
 
 
     fn find_guess(&self){
