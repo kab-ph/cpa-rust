@@ -4,6 +4,7 @@ use ndarray::{Array2, ArrayView2};
 use ndarray_npy::WriteNpyExt;
 use std::io::BufWriter;
 
+
 pub type FormatTraces = i16;
 pub type FormatMetadata = i32;
 
@@ -25,29 +26,3 @@ pub fn write_npy(dir: &str, ar: ArrayView2<f32>){
     let writer = BufWriter::new(File::create(dir).unwrap());
     let _ = ar.write_npy(writer);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
