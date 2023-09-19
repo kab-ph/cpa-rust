@@ -50,6 +50,7 @@ fn cpa()
     }).reduce(|| Cpa::new(size, guess_range, target_byte, leakage_model), |a: Cpa, b| a+b);
     cpa.finalize();
     println!("Guessed key = {}", cpa.pass_guess());
+    // save corr key curves in npy
     write_npy("examples/corr.npy", cpa.pass_corr_array().view());
     
 }
@@ -84,7 +85,8 @@ fn rank(){
         }
         bar.update(); 
     }
-    write_npy("examples/rank_fast.npy", rank.pass_rank());
+    // save rank key curves in npy
+    write_npy("examples/rank.npy", rank.pass_rank());
 }
     
     
