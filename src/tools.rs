@@ -3,23 +3,14 @@ use std::fs::File;
 use ndarray::{Array2, ArrayView2};
 use ndarray_npy::WriteNpyExt;
 use std::io::BufWriter;
+use ndarray_npy::ReadableElement;
 
 
-pub type FormatTraces = i16;
-pub type FormatMetadata = i32;
-
-
-pub fn read_leakages(dir: &str)-> Array2<FormatTraces>{
+pub fn read_array_2_from_npy_file<T: ReadableElement> (dir: &str)-> Array2<T>{
     let reader: File = File::open(dir).unwrap();
-    let arr: Array2<FormatTraces> = Array2::<FormatTraces>::read_npy(reader).unwrap();
+    let arr: Array2<T> = Array2::<T>::read_npy(reader).unwrap();
     arr
 }           
-
-pub fn read_metadata(dir: &str)-> Array2<FormatMetadata>{
-    let reader: File = File::open(dir).unwrap();
-    let arr:Array2<FormatMetadata> = Array2::<FormatMetadata>::read_npy(reader).unwrap();
-    arr
-}
 
 
 pub fn write_npy(dir: &str, ar: ArrayView2<f32>){
