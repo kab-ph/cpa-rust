@@ -100,4 +100,5 @@ fn main(){
     t = Instant::now();
     rank();
     println!("Time for key rank {:?}", t.elapsed());
+    println!("tools");
 }
