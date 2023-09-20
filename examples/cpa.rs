@@ -51,9 +51,12 @@ fn cpa()
     cpa.finalize();
     println!("Guessed key = {}", cpa.pass_guess());
     // save corr key curves in npy
-    write_npy("examples/corr.npy", cpa.pass_corr_array().view());
+    // write_npy("examples/corr.npy", cpa.pass_corr_array().view());
     
 }
+
+
+
 
 fn rank(){
     let size: usize = 5000; // Number of samples 
