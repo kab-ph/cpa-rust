@@ -5,13 +5,6 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[lib]
-name = "cpa"
-path = "src/lib.rs"
-
-[[bin]]
-name = "mfbin"
-path = "examples/cpa.rs"
 
 
 [dependencies]
@@ -25,5 +18,4 @@ plotters = "0.3"
 fast-float = "0.2"
 rayon = "1.7.0"
 simple_bar = "0.2.2"
-indicatif = {version = "*", features = ["rayon"]}
-
+indicatif = "0.17.3"
