@@ -21,7 +21,7 @@ fn rank(){
     let size: usize = 5000; // Number of samples 
     let guess_range = 256; // 2**(key length)
     let target_byte = 1;
-    let folder = String::from("data");  
+    let folder = String::from("../data");  
     let nfiles = 5;   
     let mut bar = ProgressBar::default(nfiles as u32, 50, false);
     let chunk = 3000;

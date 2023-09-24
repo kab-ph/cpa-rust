@@ -22,7 +22,7 @@ fn cpa()
     let size: usize = 5000;  // Number of samples 
     let guess_range = 256;  // 2**(key length)
     let target_byte = 1;    
-    let folder = String::from("data"); // Directory of leakages and metadata
+    let folder = String::from("../data"); // Directory of leakages and metadata
     let nfiles = 5; // Number of files in the directory. TBD: Automating this value
     
     /* Parallel operation using multi-threading on patches */
