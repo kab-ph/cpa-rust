@@ -55,8 +55,6 @@ fn cpa()
 
 
 
-
-    
 fn main(){
     let t = Instant::now();
     cpa();
