@@ -1,6 +1,8 @@
 # cpa-rust
 
-This class implements the CPA engine shown in: https://eprint.iacr.org/2013/794.pdf
+This class implements two CPA engines shown in: 
+- https://eprint.iacr.org/2013/794.pdf
+- https://www.iacr.org/archive/ches2004/31560016/31560016.pdf
 
 ## Using
 If you'd like to read it locally, [install Rust](https://www.rust-lang.org/tools/install), and then
