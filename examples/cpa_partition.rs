@@ -41,7 +41,8 @@ fn cpa() {
                 ArrayBase<OwnedRepr<i16>, Dim<[usize; 2]>>,
                 ArrayBase<OwnedRepr<i32>, Dim<[usize; 2]>>,
             )| {
-                let mut c: Cpa_partition = Cpa_partition::new(size, guess_range, target_byte, leakage_model);
+                let mut c: Cpa_partition =
+                    Cpa_partition::new(size, guess_range, target_byte, leakage_model);
                 let len_leakage = patch.0.shape()[0];
                 for i in 0..len_leakage {
                     c.update(

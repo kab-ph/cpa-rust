@@ -53,8 +53,6 @@ fn cpa() {
     write_array("../results/corr.npy", cpa.pass_corr_array().view());
 }
 
-
-
 fn success_rate() {
     /* This function is used for calculating the success rate */
     let start_sample: usize = 0;
@@ -96,17 +94,6 @@ fn success_rate() {
     write_array("../results/rank.npy", cpa.pass_rank());
 }
 
-
-
-
-
-
-
-
-
-
 fn main() {
     cpa();
 }
-
-

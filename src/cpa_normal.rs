@@ -1,10 +1,10 @@
-use ndarray:: {concatenate, s, Array1, Array2, ArrayView1, ArrayView2, Axis};
-use rayon:: prelude::{IntoParallelIterator, ParallelIterator};
+use ndarray::{concatenate, s, Array1, Array2, ArrayView1, ArrayView2, Axis};
+use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use std::ops::Add;
 
 pub struct Cpa {
     /* List of internal class variables */
-    sum_leakages: Array1<usize>, 
+    sum_leakages: Array1<usize>,
     sig_leakages: Array1<usize>,
     sum_keys: Array1<usize>,
     sig_keys: Array1<usize>,
@@ -18,10 +18,10 @@ pub struct Cpa {
     leakage_func: fn(ArrayView1<usize>, usize) -> usize,
     len_samples: usize,
     chunk: usize,
-    rank_traces: usize // Number of traces to calculate succes rate
+    rank_traces: usize, // Number of traces to calculate succes rate
 }
 
-/* This class implements the CPA algorithm shown in: 
+/* This class implements the CPA algorithm shown in:
 https://www.iacr.org/archive/ches2004/31560016/31560016.pdf */
 
 impl Cpa {
@@ -53,7 +53,7 @@ impl Cpa {
     pub fn update(&mut self, trace_patch: Array2<usize>, plaintext_patch: Array2<usize>) {
         /* This function updates the internal arrays of the CPA
         It accepts trace_patch and plaintext_patch to update them*/
-        
+
         self.len_leakages += self.chunk;
         self.update_values(
             plaintext_patch.clone(),
@@ -63,10 +63,8 @@ impl Cpa {
         self.update_key_leakages(trace_patch, self.guess_range);
     }
 
-
     pub fn update_values(
         /* This function generates the values and cov arrays */
-
         &mut self,
         metadata: Array2<usize>,
         _trace: Array2<usize>,
@@ -113,18 +111,16 @@ impl Cpa {
         }
     }
 
-
     pub fn update_success(&mut self, trace_patch: Array2<usize>, plaintext_patch: Array2<usize>) {
         /* This function updates the main arrays of the CPA for the success rate*/
         self.update(trace_patch, plaintext_patch);
-        if self.len_leakages % self.rank_traces == 0{
+        if self.len_leakages % self.rank_traces == 0 {
             self.finalize();
-            if self.len_leakages == self.rank_traces{
+            if self.len_leakages == self.rank_traces {
                 self.rank_slice = self.max_corr.clone();
-            }
-            else{
+            } else {
                 self.rank_slice = concatenate![Axis(1), self.rank_slice, self.max_corr];
-            }           
+            }
         }
     }
 
@@ -171,12 +167,8 @@ impl Cpa {
         }
     }
 
-    
-
-
-    pub fn success_traces(&mut self, traces_no: usize){
+    pub fn success_traces(&mut self, traces_no: usize) {
         self.rank_traces = traces_no;
-
     }
 
     pub fn pass_rank(&self) -> ArrayView2<f32> {
