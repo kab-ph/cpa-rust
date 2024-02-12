@@ -16,7 +16,7 @@ pub fn leakage_model(value: ArrayView1<usize>, guess: usize) -> usize {
 
 fn cpa() {
     let start_sample: usize = 0;
-    let end_sample: usize = 500;
+    let end_sample: usize = 1000;
     let size: usize = end_sample - start_sample; // Number of samples
     let patch: usize = 1000;
     let guess_range = 256; // 2**(key length)
@@ -47,7 +47,7 @@ fn cpa() {
         }
     }
 
-    // cpa.finalize();
+    cpa.finalize();
     println!("Guessed key = {}", cpa.pass_guess());
     // save corr key curves in npy
     write_array("../results/corr.npy", cpa.pass_corr_array().view());
@@ -95,5 +95,7 @@ fn success_rate() {
 }
 
 fn main() {
+    let mut t = time::Instant::now();
     cpa();
+    println!("{:?}", t.elapsed());
 }

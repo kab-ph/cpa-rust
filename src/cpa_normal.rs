@@ -70,6 +70,7 @@ impl Cpa {
         _trace: Array2<usize>,
         _guess_range: i32,
     ) {
+        
         for row in 0..self.chunk {
             for guess in 0.._guess_range {
                 let pass_to_leakage: ArrayView1<usize> = metadata.row(row);
@@ -77,22 +78,27 @@ impl Cpa {
                     (self.leakage_func)(pass_to_leakage, guess as usize) as usize;
             }
         }
-
-        /* Parallelism is used to update the cov array */
-        for row in 0..self.guess_range {
-            let row_cov: Vec<usize> = (0..self.len_samples)
-                .into_par_iter()
-                .map(|index_column| {
-                    _trace
-                        .column(index_column)
-                        .dot(&self.values.column(row as usize))
-                })
-                .collect();
-
-            let mut r: Array1<usize> = row_cov.into();
-            r = r.clone() + self.cov.row(row as usize);
-            self.cov.row_mut(row as usize).assign(&r);
+        
+        for column in 0..self.len_samples {
+            for row in 0..self.guess_range{
+                self.cov[[row as usize, column]] += self.values.column(row as usize).dot(&_trace.column(column as usize));
+            }
         }
+        /* Parallelism is used to update the cov array */
+        // for row in 0..self.guess_range {
+        //     let row_cov: Vec<usize> = (0..self.len_samples)
+        //         .into_par_iter()
+        //         .map(|index_column| {
+        //             _trace
+        //                 .column(index_column)
+        //                 .dot(&self.values.column(row as usize))
+        //         })
+        //         .collect();
+// 
+        //     let mut r: Array1<usize> = row_cov.into();
+        //     r = r.clone() + self.cov.row(row as usize);
+        //     self.cov.row_mut(row as usize).assign(&r);
+        // }
     }
 
     pub fn update_key_leakages(&mut self, _trace: Array2<usize>, _guess_range: i32) {
@@ -125,7 +131,7 @@ impl Cpa {
     }
 
     pub fn finalize(&mut self) {
-        // println!("{:?}", self.sum_keys);
+        // println!("{:?}", self.cov);
         /* This function finalizes the calculation after feeding the
         overall traces */
 
