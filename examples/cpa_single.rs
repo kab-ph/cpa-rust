@@ -78,7 +78,7 @@ fn cpa_parallel() {
 
 fn main() {
     let mut t = time::Instant::now();
-    cpa();
+    cpa_parallel();
     println!("{:?}", t.elapsed());    
 }
 

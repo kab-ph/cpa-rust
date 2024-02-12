@@ -56,8 +56,8 @@ impl Cpa {
 
         self.len_leakages += self.chunk;
         self.update_values(
-            plaintext_patch.clone(),
-            trace_patch.clone(),
+            &plaintext_patch,
+            &trace_patch,
             self.guess_range,
         );
         self.update_key_leakages(trace_patch, self.guess_range);
@@ -66,8 +66,8 @@ impl Cpa {
     pub fn update_values(
         /* This function generates the values and cov arrays */
         &mut self,
-        metadata: Array2<usize>,
-        _trace: Array2<usize>,
+        metadata: &Array2<usize>,
+        _trace: &Array2<usize>,
         _guess_range: i32,
     ) {
         

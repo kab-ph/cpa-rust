@@ -17,7 +17,7 @@ pub fn leakage_model(value: ArrayView1<usize>, guess: usize) -> usize {
 
 fn cpa() {
     let start_sample: usize = 0;
-    let end_sample: usize = 500;
+    let end_sample: usize = 1000;
     let size: usize = end_sample - start_sample; // Number of samples
     let guess_range: i32 = 256; // 2**(key length)
     let folder = String::from("data/old"); // Directory of leakages and metadata
