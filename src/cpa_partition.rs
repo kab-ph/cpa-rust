@@ -2,6 +2,7 @@ use ndarray::{concatenate, s, Array1, Array2, ArrayView1, ArrayView2, Axis};
 use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use std::ops::Add;
 
+#[allow(non_camel_case_types)]
 pub struct Cpa_partition {
     sum_leakages: Array1<usize>,
     sig_leakages: Array1<usize>,

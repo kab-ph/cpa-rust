@@ -3,7 +3,6 @@ use cpa::leakage::{hw, sbox};
 use cpa::tools::{read_array_2_from_npy_file, write_array};
 use indicatif::ProgressIterator;
 use ndarray::*;
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::time::{self};
 
 // traces format
@@ -11,8 +10,8 @@ type FormatTraces = i16;
 type FormatMetadata = i32;
 
 // leakage model
-pub fn leakage_model(value: ArrayView1<usize>, guess: usize) -> usize {
-    hw(sbox((value[1] ^ guess) as u8) as usize)
+pub fn leakage_model(value: Array1<FormatMetadata>, guess: usize) -> usize {
+    hw(sbox(value[1] as u8 ^ guess as u8) as usize)
 }
 
 fn cpa() {
@@ -31,9 +30,12 @@ fn cpa() {
         let plaintext: Array2<FormatMetadata> =
             read_array_2_from_npy_file::<FormatMetadata>(&dir_p);
         let len_leakages = leakages.shape()[0];
-        for row in 0..len_leakages{
-            let sample_trace: Array1<usize> = leakages.row(row).slice(s![start_sample..end_sample]).map(|l| *l as usize);
-            let sample_metadat: Array1<usize> = plaintext.row(row).map(|p| *p as usize );
+        for row in 0..len_leakages {
+            let sample_trace: Array1<f64> = leakages
+                .row(row)
+                .slice(s![start_sample..end_sample])
+                .map(|l| *l as f64);
+            let sample_metadat: Array1<FormatMetadata> = plaintext.row(row).to_owned();
             cpa.update(sample_trace, sample_metadat);
         }
     }
@@ -44,13 +46,8 @@ fn cpa() {
     write_array("../results/corr.npy", cpa.pass_corr_array().view());
 }
 
-
-
-
 fn main() {
-    let mut t = time::Instant::now();
+    let t = time::Instant::now();
     cpa();
-    println!("{:?}", t.elapsed());    
+    println!("{:?}", t.elapsed());
 }
-
-

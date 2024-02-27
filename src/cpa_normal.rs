@@ -1,7 +1,5 @@
 use ndarray::{concatenate, s, Array1, Array2, ArrayView1, ArrayView2, Axis};
-use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use std::ops::Add;
-
 pub struct Cpa {
     /* List of internal class variables */
     sum_leakages: Array1<usize>,
@@ -55,11 +53,7 @@ impl Cpa {
         It accepts trace_patch and plaintext_patch to update them*/
 
         self.len_leakages += self.chunk;
-        self.update_values(
-            &plaintext_patch,
-            &trace_patch,
-            self.guess_range,
-        );
+        self.update_values(&plaintext_patch, &trace_patch, self.guess_range);
         self.update_key_leakages(trace_patch, self.guess_range);
     }
 
@@ -70,7 +64,6 @@ impl Cpa {
         _trace: &Array2<usize>,
         _guess_range: i32,
     ) {
-        
         for row in 0..self.chunk {
             for guess in 0.._guess_range {
                 let pass_to_leakage: ArrayView1<usize> = metadata.row(row);
@@ -78,10 +71,13 @@ impl Cpa {
                     (self.leakage_func)(pass_to_leakage, guess as usize) as usize;
             }
         }
-        
+
         for column in 0..self.len_samples {
-            for row in 0..self.guess_range{
-                self.cov[[row as usize, column]] += self.values.column(row as usize).dot(&_trace.column(column as usize));
+            for row in 0..self.guess_range {
+                self.cov[[row as usize, column]] += self
+                    .values
+                    .column(row as usize)
+                    .dot(&_trace.column(column as usize));
             }
         }
         /* Parallelism is used to update the cov array */
@@ -94,7 +90,7 @@ impl Cpa {
         //                 .dot(&self.values.column(row as usize))
         //         })
         //         .collect();
-// 
+        //
         //     let mut r: Array1<usize> = row_cov.into();
         //     r = r.clone() + self.cov.row(row as usize);
         //     self.cov.row_mut(row as usize).assign(&r);

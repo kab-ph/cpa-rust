@@ -19,7 +19,7 @@ fn cpa() {
     let start_sample: usize = 0;
     let end_sample: usize = 1000;
     let size: usize = end_sample - start_sample; // Number of samples
-    let patch: usize = 1000;
+    let patch: usize = 10;
     let guess_range = 256; // 2**(key length)
     let folder = String::from("data/old"); // Directory of leakages and metadata
     let nfiles = 5; // Number of files in the directory. TBD: Automating this value
@@ -54,9 +54,8 @@ fn cpa() {
     write_array("../results/corr.npy", cpa.pass_corr_array().view());
 }
 
-
 fn main() {
     let t = time::Instant::now();
     cpa();
-    println!("{:?}", t.elapsed());        
+    println!("{:?}", t.elapsed());
 }

@@ -1,21 +1,21 @@
-use ndarray::{concatenate, s, Array1, Array2, ArrayView1, ArrayView2, Axis};
-use rayon::prelude::{IntoParallelIterator, ParallelIterator};
+use ndarray::{concatenate, s, Array1, Array2, ArrayView2, Axis};
 use std::ops::Add;
 
-pub struct Cpa {
+pub struct Cpa<T> {
     /* List of internal class variables */
-    sum_leakages: Array1<usize>,
-    sig_leakages: Array1<usize>,
+    sum_leakages: Array1<f64>,
+    sig_leakages: Array1<f64>,
     sum_keys: Array1<usize>,
     sig_keys: Array1<usize>,
     values: Array1<usize>,
     len_leakages: usize,
     guess_range: i32,
-    cov: Array2<usize>,
+    cov: Array2<f64>,
     corr: Array2<f32>,
     max_corr: Array2<f32>,
     rank_slice: Array2<f32>,
-    leakage_func: fn(ArrayView1<usize>, usize) -> usize,
+    init_rank: bool,
+    leakage_func: fn(T, usize) -> usize,
     len_samples: usize,
     rank_traces: usize, // Number of traces to calculate succes rate
 }
@@ -23,12 +23,8 @@ pub struct Cpa {
 /* This class implements the CPA algorithm shown in:
 https://www.iacr.org/archive/ches2004/31560016/31560016.pdf */
 
-impl Cpa {
-    pub fn new(
-        size: usize,
-        guess_range: i32,
-        f: fn(ArrayView1<usize>, usize) -> usize,
-    ) -> Self {
+impl<T: Clone> Cpa<T> {
+    pub fn new(size: usize, guess_range: i32, f: fn(T, usize) -> usize) -> Self {
         Self {
             len_samples: size,
             guess_range: guess_range,
@@ -44,56 +40,56 @@ impl Cpa {
             leakage_func: f,
             len_leakages: 0,
             rank_traces: 0,
-            // traces_patch: Array2::zeros((patch, size)),
+            init_rank: false, // traces_patch: Array2::zeros((patch, size)),
         }
     }
 
-    pub fn update(&mut self, trace: Array1<usize>, metadata: Array1<usize>) {
-        
-        self.update_1(&metadata);
-        self.update_key_leakages(&trace);
-        self.update_cov(&trace);
+    pub fn update<U: Clone>(&mut self, trace: Array1<U>, metadata: T)
+    where
+        f64: From<U>,
+    {
+        let mut trace_tmp: Array1<f64> = Array1::zeros(self.len_samples);
+        for i in 0..self.len_samples as usize {
+            trace_tmp[i] = trace[i].clone().into();
+        }
+        self.update_values(&metadata);
+        self.update_arrays(&trace_tmp);
+        self.update_cov(&trace_tmp);
         self.len_leakages += 1;
     }
 
-    pub fn update_1(&mut self, metadata: &Array1<usize>){
+    pub fn update_values(&mut self, metadata: &T) {
         for guess in 0..self.guess_range {
-            self.values[guess as usize] =
-                (self.leakage_func)(metadata.view(), guess as usize);
+            self.values[guess as usize] = (self.leakage_func)(metadata.clone(), guess as usize);
         }
-
     }
-
-
 
     pub fn update_cov(
         /* This function generates the values and cov arrays */
-        &mut self, sample_trace: &Array1<usize>
-        
+        &mut self,
+        sample_trace: &Array1<f64>,
     ) {
-        
-        
         /* Parallelism is used to update the cov array */
         for column in 0..self.len_samples {
-            for row in 0..self.guess_range{
-                self.cov[[row as usize, column]] += self.values[row as usize] * sample_trace[column]; 
-
+            for row in 0..self.guess_range {
+                self.cov[[row as usize, column]] +=
+                    self.values[row as usize] as f64 * sample_trace[column];
             }
         }
     }
 
-    pub fn update_key_leakages(&mut self, sample_trace: &Array1<usize>) {
+    pub fn update_arrays(&mut self, sample_trace: &Array1<f64>) {
         for i in 0..self.len_samples {
-            self.sum_leakages[i] += sample_trace[i]; 
-            self.sig_leakages[i] += sample_trace[i] * sample_trace[i]; 
+            self.sum_leakages[i] += sample_trace[i];
+            self.sig_leakages[i] += sample_trace[i] * sample_trace[i];
         }
 
         for guess in 0..self.guess_range {
             self.sum_keys[guess as usize] += self.values[guess as usize] as usize;
-            self.sig_keys[guess as usize] += (self.values[guess as usize] * self.values[guess as usize]) as usize;
+            self.sig_keys[guess as usize] +=
+                (self.values[guess as usize] * self.values[guess as usize]) as usize;
         }
     }
-
 
     pub fn finalize(&mut self) {
         // println!("{:?}", self.cov);
@@ -162,26 +158,40 @@ impl Cpa {
 
         guess
     }
+
+    pub fn update_success(&mut self) {
+        if !self.init_rank {
+            self.rank_slice = self.max_corr.clone();
+            self.init_rank = true;
+        } else {
+            self.rank_slice = concatenate![Axis(1), self.rank_slice.clone(), self.max_corr];
+        }
+    }
+
+    pub fn pass_succes(&self) -> Array2<f32> {
+        self.rank_slice.clone()
+    }
 }
 
-
-impl Add for Cpa{
+impl<T> Add for Cpa<T> {
     type Output = Self;
-    fn add(self, rhs: Self) -> Self{
-        Self { sum_leakages: self.sum_leakages + rhs.sum_leakages,
-             sig_leakages: self.sig_leakages + rhs.sig_leakages, 
-             sum_keys: self.sum_keys + rhs.sum_keys, 
-             sig_keys: self.sig_keys + rhs.sig_keys,
-             values: self.values,
-             len_leakages: self.len_leakages + rhs.len_leakages, 
-             guess_range: self.guess_range, 
-             cov: self.cov + rhs.cov, 
-             corr: self.corr, 
-             max_corr: self.max_corr, 
-             rank_slice: self.rank_slice, 
-             leakage_func: self.leakage_func, 
-             len_samples: self.len_samples, 
-             rank_traces: self.rank_traces }
-
+    fn add(self, rhs: Self) -> Self {
+        Self {
+            sum_leakages: self.sum_leakages + rhs.sum_leakages,
+            sig_leakages: self.sig_leakages + rhs.sig_leakages,
+            sum_keys: self.sum_keys + rhs.sum_keys,
+            sig_keys: self.sig_keys + rhs.sig_keys,
+            values: self.values,
+            len_leakages: self.len_leakages + rhs.len_leakages,
+            guess_range: self.guess_range,
+            cov: self.cov + rhs.cov,
+            corr: self.corr,
+            max_corr: self.max_corr,
+            rank_slice: self.rank_slice,
+            leakage_func: self.leakage_func,
+            len_samples: self.len_samples,
+            rank_traces: self.rank_traces,
+            init_rank: self.init_rank,
+        }
     }
 }
