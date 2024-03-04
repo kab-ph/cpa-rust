@@ -71,15 +71,20 @@ impl Cpa {
                     (self.leakage_func)(pass_to_leakage, guess as usize) as usize;
             }
         }
+        self.cov = self.cov.clone() + self.values.t().dot(_trace);
 
-        for column in 0..self.len_samples {
-            for row in 0..self.guess_range {
-                self.cov[[row as usize, column]] += self
-                    .values
-                    .column(row as usize)
-                    .dot(&_trace.column(column as usize));
-            }
-        }
+        // for column in 0..self.len_samples {
+        //     for row in 0..self.guess_range {
+        //         self.cov[[row as usize, column]] += self
+        //             .values
+        //             .column(row as usize)
+        //             .dot(&_trace.column(column as usize));
+        //         
+        //     }
+        // }
+
+        // let tmp_cov: Array2<usize> = self.values.t().dot(_trace);
+        
         /* Parallelism is used to update the cov array */
         // for row in 0..self.guess_range {
         //     let row_cov: Vec<usize> = (0..self.len_samples)

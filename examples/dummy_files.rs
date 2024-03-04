@@ -40,7 +40,7 @@ pub fn leakage_model(value: Array1<FormatMetadata>, guess: usize) -> usize {
                  .row(row)
                  .slice(s![start_sample..end_sample])
                  .map(|l| *l as f64);
-             let sample_metadat: Array1<usize> = plaintext.row(row).map(|p| *p as usize);
+             let sample_metadat: Array1<FormatMetadata> = plaintext.row(row).to_owned();
              cpa.update(sample_trace, sample_metadat);
          }
      }

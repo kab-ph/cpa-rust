@@ -3,8 +3,7 @@ use cpa::leakage::{hw, sbox};
 use cpa::tools::{read_array_2_from_npy_file, write_array};
 use indicatif::ProgressIterator;
 use ndarray::*;
-use rayon::result;
-use std::time::{self, Duration};
+use std::time::Instant;
 
 // traces format
 type FormatTraces = i16;
@@ -19,14 +18,13 @@ fn cpa() {
     let start_sample: usize = 0;
     let end_sample: usize = 1000;
     let size: usize = end_sample - start_sample; // Number of samples
-    let patch: usize = 10;
+    let patch: usize = 100;
     let guess_range = 256; // 2**(key length)
     let folder = String::from("data/old"); // Directory of leakages and metadata
     let nfiles = 5; // Number of files in the directory. TBD: Automating this value
     let rank_traces = 2000;
     let mut cpa = Cpa::new(size, patch, guess_range, leakage_model);
     cpa.success_traces(rank_traces);
-
     for i in (0..nfiles).progress() {
         let dir_l = format!("{folder}/l{i}.npy");
         let dir_p = format!("{folder}/p{i}.npy");
@@ -54,8 +52,12 @@ fn cpa() {
     write_array("../results/corr.npy", cpa.pass_corr_array().view());
 }
 
+
+
+
+
 fn main() {
-    let t = time::Instant::now();
+    let t = Instant::now();
     cpa();
     println!("{:?}", t.elapsed());
 }

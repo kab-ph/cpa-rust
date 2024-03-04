@@ -46,12 +46,16 @@ impl<T: Clone> Cpa<T> {
 
     pub fn update<U: Clone>(&mut self, trace: Array1<U>, metadata: T)
     where
-        f64: From<U>,
+        f64: From< U>,
     {
+        
+        
         let mut trace_tmp: Array1<f64> = Array1::zeros(self.len_samples);
         for i in 0..self.len_samples as usize {
             trace_tmp[i] = trace[i].clone().into();
         }
+
+        
         self.update_values(&metadata);
         self.update_arrays(&trace_tmp);
         self.update_cov(&trace_tmp);
@@ -69,13 +73,37 @@ impl<T: Clone> Cpa<T> {
         &mut self,
         sample_trace: &Array1<f64>,
     ) {
-        /* Parallelism is used to update the cov array */
+
+        /* Update cov */        
         for column in 0..self.len_samples {
             for row in 0..self.guess_range {
                 self.cov[[row as usize, column]] +=
                     self.values[row as usize] as f64 * sample_trace[column];
             }
         }
+
+
+        // let mut tmp_values: Array2<f64> = Array2::zeros((self.guess_range as usize, 1));
+        // tmp_values.column_mut(0).assign(&self.values.map(|x| *x as f64));
+        // let tmp_cov: Array2<f64> = tmp_values * sample_trace;
+        // self.cov = self.cov.clone() + tmp_cov;
+        
+
+        
+        // let mut tmp_cov: Array2<f64> = Array2::zeros((self.guess_range as usize, self.len_samples));
+        // for column in 0..self.len_samples{
+        //     let tmp_column = sample_trace[column] * self.values.map(|x| *x as f64);
+        //     tmp_cov.column_mut(column).assign(&tmp_column);
+        // }
+        // self.cov = tmp_cov; //self.cov.clone() + tmp_cov;
+
+
+        // let mut tmp_cov: Array2<f64> = Array2::zeros((self.guess_range as usize, self.len_samples));
+        // for row in 0..self.guess_range as usize{
+        //     let tmp_row = sample_trace * self.values[row] as f64;
+        //     tmp_cov.row_mut(row).assign(&tmp_row);
+        // }
+        // self.cov = self.cov.clone() + tmp_cov;
     }
 
     pub fn update_arrays(&mut self, sample_trace: &Array1<f64>) {

@@ -11,7 +11,7 @@ use std::time::{self};
 // traces format
 type FormatTraces = f64; // f64; //i16;
 type FormatMetadata = u8; // u8; //i32;
-static mut TARGET_BYTE:usize = 0;
+static mut TARGET_BYTE: usize = 0;
 // leakage model
 
 pub fn leakage_model(value: Array1<FormatMetadata>, guess: usize) -> usize {
@@ -68,15 +68,16 @@ fn sucess_rate_cw() {
 
 pub fn cpa_cw() {
     unsafe{
-        for byte in 0..16{
+        // let mut keys = Vec::new();
+        for byte in (0..1).progress(){
             TARGET_BYTE = byte as usize;
             let start_sample: usize = 0;
-            let end_sample: usize = 3000;
+            let end_sample: usize = 5000;
             let size: usize = end_sample - start_sample; // Number of samples
             let guess_range = 256; // 2**(key length)
-            let folder = String::from("../data/log_cw"); // Directory of leakages and metadata
-            let nfiles: i32 = 2; // Number of files in the directory. TBD: Automating this value
-            let mut cpa_parallel = (0..nfiles)
+            let folder = String::from("../../../intenship/scripts/log_232404"); // ../data/log_cw
+            let nfiles: i32 = 285; // Number of files in the directory. TBD: Automating this value
+            let mut cpa_parallel: Cpa<ArrayBase<OwnedRepr<u8>, Dim<[usize; 1]>>> = (0..nfiles)
                 .into_par_iter()
                 .map(|num| {
                     let dir_l = format!("{folder}/l/{num}.npy");
@@ -99,9 +100,11 @@ pub fn cpa_cw() {
         
             cpa_parallel.finalize();
             println!("Guessed key = {}", cpa_parallel.pass_guess());
+            // keys.push(cpa_parallel.pass_guess());
             // save corr key curves in npy
             // write_array("../results/corr.npy", cpa_parallel.pass_corr_array().view());
         }
+        // println!("{:?}", keys);
 }
 }
 
