@@ -10,8 +10,8 @@ type FormatTraces = i16;
 type FormatMetadata = i32;
 
 // leakage model
-pub fn leakage_model(value: Array1<FormatMetadata>, guess: usize) -> usize {
-    hw(sbox(value[1] as u8 ^ guess as u8) as usize)
+pub fn leakage_model(value: Array1<FormatMetadata>, guess: usize) -> f64 {
+    hw(sbox(value[1] as u8 ^ guess as u8) as usize) as f64
 }
 
 fn cpa() {

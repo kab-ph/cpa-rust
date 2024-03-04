@@ -5,9 +5,9 @@ pub struct Cpa<T> {
     /* List of internal class variables */
     sum_leakages: Array1<f64>,
     sig_leakages: Array1<f64>,
-    sum_keys: Array1<usize>,
-    sig_keys: Array1<usize>,
-    values: Array1<usize>,
+    sum_keys: Array1<f64>,
+    sig_keys: Array1<f64>,
+    values: Array1<f64>,
     len_leakages: usize,
     guess_range: i32,
     cov: Array2<f64>,
@@ -15,7 +15,7 @@ pub struct Cpa<T> {
     max_corr: Array2<f32>,
     rank_slice: Array2<f32>,
     init_rank: bool,
-    leakage_func: fn(T, usize) -> usize,
+    leakage_func: fn(T, usize) -> f64,
     len_samples: usize,
     rank_traces: usize, // Number of traces to calculate succes rate
 }
@@ -24,7 +24,7 @@ pub struct Cpa<T> {
 https://www.iacr.org/archive/ches2004/31560016/31560016.pdf */
 
 impl<T: Clone> Cpa<T> {
-    pub fn new(size: usize, guess_range: i32, f: fn(T, usize) -> usize) -> Self {
+    pub fn new(size: usize, guess_range: i32, f: fn(T, usize) -> f64) -> Self {
         Self {
             len_samples: size,
             guess_range: guess_range,
@@ -113,9 +113,9 @@ impl<T: Clone> Cpa<T> {
         }
 
         for guess in 0..self.guess_range {
-            self.sum_keys[guess as usize] += self.values[guess as usize] as usize;
+            self.sum_keys[guess as usize] += self.values[guess as usize];
             self.sig_keys[guess as usize] +=
-                (self.values[guess as usize] * self.values[guess as usize]) as usize;
+                self.values[guess as usize] * self.values[guess as usize];
         }
     }
 

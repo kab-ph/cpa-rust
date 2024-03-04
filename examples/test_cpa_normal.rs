@@ -10,15 +10,15 @@ type FormatTraces = i16;
 type FormatMetadata = i32;
 
 // leakage model
-pub fn leakage_model(value: ArrayView1<usize>, guess: usize) -> usize {
-    hw(sbox((value[1] ^ guess) as u8) as usize)
+pub fn leakage_model(value: ArrayView1<usize>, guess: usize) -> f64 {
+    hw(sbox((value[1] ^ guess) as u8) as usize) as f64
 }
 
 fn cpa() {
     let start_sample: usize = 0;
     let end_sample: usize = 1000;
     let size: usize = end_sample - start_sample; // Number of samples
-    let patch: usize = 100;
+    let patch: usize = 500;
     let guess_range = 256; // 2**(key length)
     let folder = String::from("data/old"); // Directory of leakages and metadata
     let nfiles = 5; // Number of files in the directory. TBD: Automating this value
@@ -38,7 +38,7 @@ fn cpa() {
             let range_metadat = 0..plaintext.shape()[1];
             let sample_traces = leakages
                 .slice(s![range_rows.clone(), range_samples])
-                .map(|l| *l as usize);
+                .map(|l| *l as f64);
             let sample_metadata = plaintext
                 .slice(s![range_rows, range_metadat])
                 .map(|p| *p as usize);

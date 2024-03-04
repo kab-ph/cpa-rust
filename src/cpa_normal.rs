@@ -2,18 +2,18 @@ use ndarray::{concatenate, s, Array1, Array2, ArrayView1, ArrayView2, Axis};
 use std::ops::Add;
 pub struct Cpa {
     /* List of internal class variables */
-    sum_leakages: Array1<usize>,
-    sig_leakages: Array1<usize>,
-    sum_keys: Array1<usize>,
-    sig_keys: Array1<usize>,
-    values: Array2<usize>,
+    sum_leakages: Array1<f64>,
+    sig_leakages: Array1<f64>,
+    sum_keys: Array1<f64>,
+    sig_keys: Array1<f64>,
+    values: Array2<f64>,
     len_leakages: usize,
     guess_range: i32,
-    cov: Array2<usize>,
+    cov: Array2<f64>,
     corr: Array2<f32>,
     max_corr: Array2<f32>,
     rank_slice: Array2<f32>,
-    leakage_func: fn(ArrayView1<usize>, usize) -> usize,
+    leakage_func: fn(ArrayView1<usize>, usize) -> f64,
     len_samples: usize,
     chunk: usize,
     rank_traces: usize, // Number of traces to calculate succes rate
@@ -27,7 +27,7 @@ impl Cpa {
         size: usize,
         patch: usize,
         guess_range: i32,
-        f: fn(ArrayView1<usize>, usize) -> usize,
+        f: fn(ArrayView1<usize>, usize) -> f64,
     ) -> Self {
         Self {
             len_samples: size,
@@ -48,7 +48,7 @@ impl Cpa {
         }
     }
 
-    pub fn update(&mut self, trace_patch: Array2<usize>, plaintext_patch: Array2<usize>) {
+    pub fn update(&mut self, trace_patch: Array2<f64>, plaintext_patch: Array2<usize>) {
         /* This function updates the internal arrays of the CPA
         It accepts trace_patch and plaintext_patch to update them*/
 
@@ -61,14 +61,14 @@ impl Cpa {
         /* This function generates the values and cov arrays */
         &mut self,
         metadata: &Array2<usize>,
-        _trace: &Array2<usize>,
+        _trace: &Array2<f64>,
         _guess_range: i32,
     ) {
         for row in 0..self.chunk {
             for guess in 0.._guess_range {
                 let pass_to_leakage: ArrayView1<usize> = metadata.row(row);
                 self.values[[row, guess as usize]] =
-                    (self.leakage_func)(pass_to_leakage, guess as usize) as usize;
+                    (self.leakage_func)(pass_to_leakage, guess as usize);
             }
         }
         self.cov = self.cov.clone() + self.values.t().dot(_trace);
@@ -102,7 +102,7 @@ impl Cpa {
         // }
     }
 
-    pub fn update_key_leakages(&mut self, _trace: Array2<usize>, _guess_range: i32) {
+    pub fn update_key_leakages(&mut self, _trace: Array2<f64>, _guess_range: i32) {
         for i in 0..self.len_samples {
             self.sum_leakages[i] += _trace.column(i).sum(); // _trace[i] as usize;
             self.sig_leakages[i] += _trace.column(i).dot(&_trace.column(i)); // (_trace[i] * _trace[i]) as usize;
@@ -118,7 +118,7 @@ impl Cpa {
         }
     }
 
-    pub fn update_success(&mut self, trace_patch: Array2<usize>, plaintext_patch: Array2<usize>) {
+    pub fn update_success(&mut self, trace_patch: Array2<f64>, plaintext_patch: Array2<usize>) {
         /* This function updates the main arrays of the CPA for the success rate*/
         self.update(trace_patch, plaintext_patch);
         if self.len_leakages % self.rank_traces == 0 {
