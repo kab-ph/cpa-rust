@@ -10,8 +10,8 @@ type FormatTraces = i16;
 type FormatMetadata = i32;
 
 // leakage model
-pub fn leakage_model(value: ArrayView1<usize>, guess: usize) -> f64 {
-    hw(sbox((value[1] ^ guess) as u8) as usize) as f64
+pub fn leakage_model(value: ArrayView1<usize>, guess: usize) -> usize {
+    hw(sbox((value[1] ^ guess) as u8) as usize)
 }
 
 fn cpa() {
@@ -38,7 +38,7 @@ fn cpa() {
             let range_metadat = 0..plaintext.shape()[1];
             let sample_traces = leakages
                 .slice(s![range_rows.clone(), range_samples])
-                .map(|l| *l as f64);
+                .map(|l| *l as f32);
             let sample_metadata = plaintext
                 .slice(s![range_rows, range_metadat])
                 .map(|p| *p as usize);
@@ -51,10 +51,6 @@ fn cpa() {
     // save corr key curves in npy
     write_array("../results/corr.npy", cpa.pass_corr_array().view());
 }
-
-
-
-
 
 fn main() {
     let t = Instant::now();

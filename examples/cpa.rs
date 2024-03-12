@@ -1,116 +1,101 @@
-use cpa::cpa_single::*;
+use cpa::cpa_normal::*;
 use cpa::leakage::{hw, sbox};
-use cpa::tools::{read_array_2_from_npy_file, write_array};
+use cpa::tools::{progress_bar, read_array_2_from_npy_file, write_array};
 use indicatif::ProgressIterator;
 use ndarray::*;
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::time::{self};
 
 
+// leakage model
+pub fn leakage_model(value: ArrayView1<usize>, guess: usize) -> usize {
+    hw(sbox((value[1] ^ guess) as u8) as usize)
+}
+
 
 // traces format
-type FormatTraces = f64; // f64; //i16;
-type FormatMetadata = u8; // u8; //i32;
-static mut TARGET_BYTE: usize = 0;
-// leakage model
+type FormatTraces = f64;
+type FormatMetadata = u8;
 
-pub fn leakage_model(value: Array1<FormatMetadata>, guess: usize) -> usize {
-    unsafe{
-    hw(sbox(value[TARGET_BYTE] as u8 ^ guess as u8) as usize)
+#[allow(dead_code)]
+fn cpa() {
+    let start_sample: usize = 0;
+    let end_sample: usize = 5000;
+    let size: usize = end_sample - start_sample; // Number of samples
+    let patch: usize = 500;
+    let guess_range = 256; // 2**(key length)
+    let folder = String::from("../data/cw");
+    let dir_l = format!("{folder}/leakages.npy");
+    let dir_p = format!("{folder}/plaintexts.npy");
+    let leakages: Array2<FormatTraces> = read_array_2_from_npy_file::<FormatTraces>(&dir_l);
+    let plaintext: Array2<FormatMetadata> = read_array_2_from_npy_file::<FormatMetadata>(&dir_p);
+    let len_traces = leakages.shape()[0];
+    let mut cpa_parallel = ((0..len_traces).step_by(patch)).progress_with(progress_bar(len_traces))
+        .map(|row| row)
+        .par_bridge()
+        .map(|row_number| {
+            let mut cpa = Cpa::new(size, patch, guess_range, leakage_model);
+            let range_rows = row_number..row_number + patch;
+            let range_samples = start_sample..end_sample;
+            let sample_traces = leakages
+                .slice(s![range_rows.clone(), range_samples])
+                .map(|l| *l as f32);
+            let sample_metadata: ArrayBase<OwnedRepr<usize>, Dim<[usize; 2]>> =
+                plaintext.slice(s![range_rows, ..]).map(|p| *p as usize);
+            cpa.update(sample_traces, sample_metadata);
+            cpa
+        })
+        .reduce(
+            || Cpa::new(size, patch, guess_range, leakage_model),
+            |x, y| x + y,
+        );
+    cpa_parallel.finalize();
+    println!("Guessed key = {}", cpa_parallel.pass_guess());
+    write_array("results/corr.npy", cpa_parallel.pass_corr_array().view())
 }
 
-}
 
 
 #[allow(dead_code)]
-fn sucess_rate_cw() {
+fn success() {
     let start_sample: usize = 0;
-    let end_sample: usize = 3000;
+    let end_sample: usize = 5000;
     let size: usize = end_sample - start_sample; // Number of samples
+    let patch: usize = 500;
     let guess_range = 256; // 2**(key length)
-    let folder = String::from("../data/log_cw"); // Directory of leakages and metadata
-    let nfiles: i32 = 5; // Number of files in the directory. TBD: Automating this value
-    let success_no = 500;
-    let mut cpa = Cpa::new(size, guess_range, leakage_model);
-    for n_files in (0..nfiles).progress() {
-        let dir_l = format!("{folder}/l/{n_files}.npy");
-        let dir_p = format!("{folder}/p/{n_files}.npy");
+    let folder = String::from("../data/log_584012"); // "../../../intenship/scripts/log_584012"
+    let nfiles = 13; // Number of files in the directory. TBD: Automating this value
+    let rank_traces: usize = 1000;
+    let mut cpa = Cpa::new(size, patch, guess_range, leakage_model);
+    cpa.success_traces(rank_traces);
+    for i in (0..nfiles).progress() {
+        let dir_l = format!("{folder}/l/{i}.npy");
+        let dir_p = format!("{folder}/p/{i}.npy");
         let leakages: Array2<FormatTraces> = read_array_2_from_npy_file::<FormatTraces>(&dir_l);
         let plaintext: Array2<FormatMetadata> =
             read_array_2_from_npy_file::<FormatMetadata>(&dir_p);
-        let no_traces = leakages.shape()[0];
-        for block in (0..no_traces).step_by(success_no) {
-            let l_chunk: ArrayView2<FormatTraces> =
-                leakages.slice(s![block..block + success_no, start_sample..end_sample]);
-            let p_chunk: ArrayView2<FormatMetadata> =
-                plaintext.slice(s![block..block + success_no, ..]);
-            let cpa_inner = (0..success_no)
-                .into_par_iter()
-                .map(|index| {
-                    let mut c = Cpa::new(size, guess_range, leakage_model);
-                    c.update(
-                        l_chunk.row(index).to_owned(),
-                        p_chunk.row(index).to_owned(),
-                    );
-                    c
-                })
-                .reduce(|| Cpa::new(size, guess_range, leakage_model), |x, y| x + y);
-            cpa = cpa + cpa_inner;
-            cpa.finalize();
-            cpa.update_success();
+        let len_leakages = leakages.shape()[0];
+        for row in (0..len_leakages).step_by(patch) {
+            let range_samples = start_sample..end_sample;
+            let range_rows: std::ops::Range<usize> = row..row + patch;
+            let range_metadat = 0..plaintext.shape()[1];
+            let sample_traces = leakages
+                .slice(s![range_rows.clone(), range_samples]).map(|l| *l as f32);
+            let sample_metadata: Array2<FormatMetadata>= plaintext
+                .slice(s![range_rows, range_metadat]).to_owned();
+            cpa.update_success(sample_traces, sample_metadata);
         }
-
-        write_array("../results/success.npy", cpa.pass_succes().view());
     }
-
+    cpa.finalize();
+    println!("Guessed key = {}", cpa.pass_guess());
+    // save corr key curves in npy
+    write_array("results/success.npy", cpa.pass_rank().view());
 }
 
 
-pub fn cpa_cw() {
-    unsafe{
-        // let mut keys = Vec::new();
-        for byte in (0..1).progress(){
-            TARGET_BYTE = byte as usize;
-            let start_sample: usize = 0;
-            let end_sample: usize = 5000;
-            let size: usize = end_sample - start_sample; // Number of samples
-            let guess_range = 256; // 2**(key length)
-            let folder = String::from("../../../intenship/scripts/log_232404"); // ../data/log_cw
-            let nfiles: i32 = 285; // Number of files in the directory. TBD: Automating this value
-            let mut cpa_parallel: Cpa<ArrayBase<OwnedRepr<u8>, Dim<[usize; 1]>>> = (0..nfiles)
-                .into_par_iter()
-                .map(|num| {
-                    let dir_l = format!("{folder}/l/{num}.npy");
-                    let dir_p = format!("{folder}/p/{num}.npy");
-                    let leakages: Array2<FormatTraces> = read_array_2_from_npy_file::<FormatTraces>(&dir_l);
-                    let plaintext: Array2<FormatMetadata> =
-                        read_array_2_from_npy_file::<FormatMetadata>(&dir_p);
-                    let len_leakages = leakages.shape()[0];
-                    let mut cpa = Cpa::new(size, guess_range, leakage_model);
-                    for row in 0..len_leakages {
-                        let sample_trace: Array1<f64> = leakages
-                            .row(row)
-                            .slice(s![start_sample..end_sample]).to_owned();
-                        let sample_metadat: Array1<FormatMetadata> = plaintext.row(row).to_owned();
-                        cpa.update(sample_trace, sample_metadat);
-                    }
-                    cpa
-                })
-                .reduce(|| Cpa::new(size, guess_range, leakage_model), |x, y| x + y);
-        
-            cpa_parallel.finalize();
-            println!("Guessed key = {}", cpa_parallel.pass_guess());
-            // keys.push(cpa_parallel.pass_guess());
-            // save corr key curves in npy
-            // write_array("../results/corr.npy", cpa_parallel.pass_corr_array().view());
-        }
-        // println!("{:?}", keys);
-}
-}
 
-fn main() {
+fn main(){
     let t = time::Instant::now();
-    cpa_cw();
+    cpa();
     println!("{:?}", t.elapsed());
 }
-

@@ -51,6 +51,3 @@ fn main() {
     cpa();
     println!("{:?}", t.elapsed());
 }
-
-
-

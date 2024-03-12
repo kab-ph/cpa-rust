@@ -21,12 +21,15 @@ pub fn sbox(index: u8) -> u8 {
     SBOX[index as usize]
 }
 
-pub fn hw(value: usize) -> usize {
-    let mut tmp = 0;
-    for i in 0..8 {
-        if (value & (1 << i)) == (1 << i) {
-            tmp += 1;
+
+pub fn hw(value: usize) -> usize{
+    let mut tmp = value;
+    let mut n_ones: usize = 0;
+    while tmp !=0 {
+        if(tmp & 1) == 1{
+            n_ones += 1;
         }
+        tmp = tmp >> 1;
     }
-    tmp
+    n_ones
 }
