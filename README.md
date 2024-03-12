@@ -9,7 +9,7 @@ If you'd like to read it locally, [install Rust](https://www.rust-lang.org/tools
 
     git clone https://github.com/kab-ph/cpa-rust.git
     cd cpa-rust
-    cargo run --example cpa
+    cargo run --release --example cpa
 
 
 
