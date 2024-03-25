@@ -1,11 +1,11 @@
 use cpa::cpa_normal::*;
 use cpa::leakage::{hw, sbox};
-use cpa::tools::{progress_bar, read_array_2_from_npy_file, write_array};
+use cpa::tools::{progress_bar, read_array_2_from_npy_file, plot_array2};
 use indicatif::ProgressIterator;
 use ndarray::*;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::time::{self};
-
+use plotly:: Plot;
 
 // leakage model
 pub fn leakage_model(value: ArrayView1<usize>, guess: usize) -> usize {
@@ -51,7 +51,10 @@ fn cpa() {
         );
     cpa_parallel.finalize();
     println!("Guessed key = {}", cpa_parallel.pass_guess());
-    write_array("results/corr.npy", cpa_parallel.pass_corr_array().view())
+    let corr = cpa_parallel.pass_corr_array();
+    let plot: Plot = plot_array2(corr.clone(), String::from("K"), String::from("CPA of K[0]"));
+    plot.show();
+    // write_array("results/corr.npy", corr.view());
 }
 
 
@@ -89,13 +92,19 @@ fn success() {
     cpa.finalize();
     println!("Guessed key = {}", cpa.pass_guess());
     // save corr key curves in npy
-    write_array("results/success.npy", cpa.pass_rank().view());
+    let plot: Plot = plot_array2(cpa.pass_rank().to_owned(), String::from("K"), String::from("Success rate"));
+    plot.show();
+    // write_array("results/success.npy", cpa.pass_rank().view());
 }
-
 
 
 fn main(){
     let t = time::Instant::now();
     cpa();
     println!("{:?}", t.elapsed());
+
 }
+
+
+
+
