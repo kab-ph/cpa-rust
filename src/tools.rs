@@ -27,18 +27,16 @@ pub fn progress_bar(len: usize) -> ProgressBar {
     progress_bar
 }
 
-pub fn plot_array2(arr: Array2<f32>, name: String, t: String) -> Plot{
+pub fn plot_array2(arr: Array2<f32>, name: String, t: String) -> Plot {
     let mut plot: Plot = Plot::new();
     let x: Vec<f32> = (0..arr.shape()[1]).into_iter().map(|x| x as f32).collect();
-    for i in 0..arr.shape()[0]{
+    for i in 0..arr.shape()[0] {
         let trace = arr.row(i).to_vec();
         // let trace = Scatter::new(x.clone(), trace).name(format!("{name} [{i}]"));
         let trace = Scatter::new(x.clone(), trace).name(format!("{name}[{i}]"));
         plot.add_trace(trace);
-
     }
-    let title: &str = &t;    
+    let title: &str = &t;
     plot.set_layout(plotly::Layout::new().title(Title::from(title)));
     plot
 }
-
